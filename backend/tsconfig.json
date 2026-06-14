@@ -11,7 +11,7 @@
     "types": ["node"],
 
     // Module Resolution
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "resolveJsonModule": true,
 

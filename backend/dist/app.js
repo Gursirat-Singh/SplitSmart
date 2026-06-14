@@ -48,7 +48,13 @@ const rate_limit_middleware_1 = require("./middleware/rate-limit.middleware");
 const app = (0, express_1.default)();
 // ── Global rate limiting & headers ───────────────────────────────────
 app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: [
+        'http://localhost:5173',
+        process.env.CLIENT_URL || "",
+    ],
+    credentials: true,
+}));
 app.use(express_1.default.json());
 const globalLimiter = (0, rate_limit_middleware_1.rateLimit)({
     windowMs: 15 * 60 * 1000,

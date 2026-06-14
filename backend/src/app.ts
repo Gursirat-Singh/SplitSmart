@@ -12,7 +12,15 @@ const app = express();
 
 // ── Global rate limiting & headers ───────────────────────────────────
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+       process.env.CLIENT_URL || "",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const globalLimiter = rateLimit({

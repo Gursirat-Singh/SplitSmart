@@ -17,6 +17,14 @@ import {
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../../components/common/SkeletonLoader';
 import { ErrorState } from '../../components/common/ErrorState';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from 'recharts';
 
 interface RecentExpense {
   id: string;
@@ -51,6 +59,12 @@ interface StatsData {
   totalSettlements: number;
   totalOutstandingDebt: number;
   totalImportedRecords: number;
+  totalExpenseAmount: number;
+  totalSettlementAmount: number;
+  topCreditor: { name: string; amount: number };
+  topDebtor: { name: string; amount: number };
+  activeMembersCount: number;
+  monthlySpendingTrend: { date: string; amount: number }[];
   recentExpenses: RecentExpense[];
   recentSettlements: RecentSettlement[];
 }
@@ -259,6 +273,126 @@ export const Dashboard = () => {
             <div className="glass-card p-4 text-center col-span-2 md:col-span-1">
               <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Imported Rows</p>
               <p className="text-2xl font-bold mt-1.5 text-primary">{stats.totalImportedRecords}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Group Financial Overview */}
+        {stats && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold tracking-tight text-primary">Group Financial Overview</h2>
+            
+            <div className="fintech-bento-grid">
+              {/* Total Group Expenses - Bento span 4 */}
+              <div className="glass-card md:col-span-4 p-6 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Total Group Expenses</p>
+                    <h3 className="text-3xl font-bold font-mono text-primary mt-3">
+                      ₹{stats.totalExpenseAmount.toFixed(2)}
+                    </h3>
+                  </div>
+                  <span className="p-2 bg-primary-container text-primary rounded-lg">
+                    <LuDollarSign className="text-lg" />
+                  </span>
+                </div>
+                <div className="mt-4 pt-4 border-t border-outline">
+                  <p className="text-xs text-on-surface-variant">Combined expenses across all groups</p>
+                </div>
+              </div>
+
+              {/* Total Settlements - Bento span 4 */}
+              <div className="glass-card md:col-span-4 p-6 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Total Settlements</p>
+                    <h3 className="text-3xl font-bold font-mono text-primary mt-3">
+                      ₹{stats.totalSettlementAmount.toFixed(2)}
+                    </h3>
+                  </div>
+                  <span className="p-2 bg-primary-container text-primary rounded-lg">
+                    <LuCreditCard className="text-lg" />
+                  </span>
+                </div>
+                <div className="mt-4 pt-4 border-t border-outline">
+                  <p className="text-xs text-on-surface-variant">Combined settlements across all groups</p>
+                </div>
+              </div>
+
+              {/* Active Members - Bento span 4 */}
+              <div className="glass-card md:col-span-4 p-6 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Total Active Members</p>
+                    <h3 className="text-3xl font-bold font-mono text-primary mt-3">
+                      {stats.activeMembersCount}
+                    </h3>
+                  </div>
+                  <span className="p-2 bg-primary-container text-primary rounded-lg">
+                    <LuUsers className="text-lg" />
+                  </span>
+                </div>
+                <div className="mt-4 pt-4 border-t border-outline">
+                  <p className="text-xs text-on-surface-variant">Unique active group participants</p>
+                </div>
+              </div>
+
+              {/* Top Creditor - Bento span 6 */}
+              <div className="glass-card md:col-span-6 p-6 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Top Group Creditor</p>
+                    <h3 className="text-2xl font-bold mt-3 text-primary truncate max-w-xs md:max-w-md">
+                      {stats.topCreditor.name}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-on-surface-variant">Net Creditable</span>
+                    <p className="text-xl font-bold font-mono text-primary mt-1">
+                      +₹{stats.topCreditor.amount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-outline">
+                  <p className="text-xs text-on-surface-variant">Member owed the most across all groups</p>
+                </div>
+              </div>
+
+              {/* Top Debtor - Bento span 6 */}
+              <div className="glass-card md:col-span-6 p-6 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Top Group Debtor</p>
+                    <h3 className="text-2xl font-bold mt-3 text-primary truncate max-w-xs md:max-w-md">
+                      {stats.topDebtor.name}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-on-surface-variant">Net Outstanding</span>
+                    <p className="text-xl font-bold font-mono text-error mt-1.5">
+                      -₹{stats.topDebtor.amount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-outline">
+                  <p className="text-xs text-on-surface-variant">Member owing the most across all groups</p>
+                </div>
+              </div>
+
+              {/* Monthly Spending Trend Chart - Bento span 12 */}
+              <div className="glass-card md:col-span-12 p-6 flex flex-col h-80">
+                <h3 className="text-xs font-semibold text-primary mb-4 uppercase tracking-wider">Monthly Spending Trends</h3>
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.monthlySpendingTrend}>
+                      <XAxis dataKey="date" stroke="#a3a3a3" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#a3a3a3" fontSize={11} tickLine={false} />
+                      <Tooltip formatter={(value) => `₹${value}`} />
+                      <Bar dataKey="amount" fill="#171717" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           </div>
         )}

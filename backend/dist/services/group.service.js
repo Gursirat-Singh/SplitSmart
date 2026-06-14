@@ -284,7 +284,13 @@ class GroupService {
                 totalOutstandingDebt: 0,
                 totalImportedRecords: 0,
                 recentExpenses: [],
-                recentSettlements: []
+                recentSettlements: [],
+                totalExpenseAmount: 0,
+                totalSettlementAmount: 0,
+                topCreditor: { name: 'None', amount: 0 },
+                topDebtor: { name: 'None', amount: 0 },
+                activeMembersCount: 0,
+                monthlySpendingTrend: []
             };
         }
         const totalExpenses = await prisma_1.prisma.expense.count({
@@ -306,6 +312,85 @@ class GroupService {
                 }
             }
         }
+        // Compute group financial overview metrics
+        const groups = await prisma_1.prisma.group.findMany({
+            where: { id: { in: groupIds } },
+            include: {
+                memberships: {
+                    where: { leftAt: null },
+                    include: {
+                        user: { select: { id: true, name: true } }
+                    }
+                }
+            }
+        });
+        const globalBalances = new Map();
+        const userNames = new Map();
+        for (const group of groups) {
+            group.memberships.forEach(m => {
+                if (m.user) {
+                    userNames.set(m.userId, m.user.name);
+                }
+            });
+            const settlementsList = await balance_service_1.BalanceService.computeGroupBalances(group.id);
+            for (const s of settlementsList) {
+                globalBalances.set(s.from, (globalBalances.get(s.from) || 0) - s.amount);
+                globalBalances.set(s.to, (globalBalances.get(s.to) || 0) + s.amount);
+            }
+        }
+        let topCreditor = { name: 'None', amount: 0 };
+        let topDebtor = { name: 'None', amount: 0 };
+        let maxPositive = 0;
+        let maxNegative = 0;
+        for (const [uId, bal] of globalBalances.entries()) {
+            if (bal > maxPositive) {
+                maxPositive = bal;
+                topCreditor = {
+                    name: userNames.get(uId) || 'Unknown',
+                    amount: Number(bal.toFixed(2))
+                };
+            }
+            if (bal < maxNegative) {
+                maxNegative = bal;
+                topDebtor = {
+                    name: userNames.get(uId) || 'Unknown',
+                    amount: Number(Math.abs(bal).toFixed(2))
+                };
+            }
+        }
+        const uniqueMemberIds = new Set();
+        for (const group of groups) {
+            group.memberships.forEach(m => {
+                uniqueMemberIds.add(m.userId);
+            });
+        }
+        const activeMembersCount = uniqueMemberIds.size;
+        const totalExpenseSum = await prisma_1.prisma.expense.aggregate({
+            where: { groupId: { in: groupIds } },
+            _sum: { baseInrAmount: true }
+        });
+        const totalExpenseAmount = Number(totalExpenseSum._sum.baseInrAmount || 0);
+        const totalSettlementSum = await prisma_1.prisma.settlement.aggregate({
+            where: { groupId: { in: groupIds } },
+            _sum: { baseInrAmount: true }
+        });
+        const totalSettlementAmount = Number(totalSettlementSum._sum.baseInrAmount || 0);
+        const expensesForTrend = await prisma_1.prisma.expense.findMany({
+            where: { groupId: { in: groupIds } },
+            select: { expenseDate: true, baseInrAmount: true },
+            orderBy: { expenseDate: 'asc' }
+        });
+        const monthlyTrendsMap = new Map();
+        expensesForTrend.forEach((exp) => {
+            const date = new Date(exp.expenseDate);
+            const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            const amount = Number(exp.baseInrAmount);
+            monthlyTrendsMap.set(monthYear, (monthlyTrendsMap.get(monthYear) || 0) + amount);
+        });
+        const monthlySpendingTrend = Array.from(monthlyTrendsMap.entries()).map(([date, amount]) => ({
+            date,
+            amount: Number(amount.toFixed(2)),
+        }));
         const recentExpenses = await prisma_1.prisma.expense.findMany({
             where: { groupId: { in: groupIds } },
             orderBy: { expenseDate: 'desc' },
@@ -331,6 +416,12 @@ class GroupService {
             totalSettlements,
             totalOutstandingDebt,
             totalImportedRecords,
+            totalExpenseAmount,
+            totalSettlementAmount,
+            topCreditor,
+            topDebtor,
+            activeMembersCount,
+            monthlySpendingTrend,
             recentExpenses: recentExpenses.map(e => ({
                 id: e.id,
                 groupId: e.groupId,

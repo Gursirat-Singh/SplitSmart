@@ -123,6 +123,21 @@ export declare class GroupService {
         totalSettlements: number;
         totalOutstandingDebt: number;
         totalImportedRecords: number;
+        totalExpenseAmount: number;
+        totalSettlementAmount: number;
+        topCreditor: {
+            name: string;
+            amount: number;
+        };
+        topDebtor: {
+            name: string;
+            amount: number;
+        };
+        activeMembersCount: number;
+        monthlySpendingTrend: {
+            date: string;
+            amount: number;
+        }[];
         recentExpenses: {
             id: string;
             groupId: string;

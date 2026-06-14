@@ -6,13 +6,38 @@ import { MembershipRepository } from '../repositories/membership.repository';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { prisma } from '../utils/prisma';
 
+function mapSettlement(s: any) {
+  return {
+    id: s.id,
+    groupId: s.groupId,
+    payerId: s.paidById,
+    payer: s.paidBy ? {
+      id: s.paidBy.id,
+      email: s.paidBy.email,
+      name: s.paidBy.name
+    } : undefined,
+    payeeId: s.paidToId,
+    payee: s.paidTo ? {
+      id: s.paidTo.id,
+      email: s.paidTo.email,
+      name: s.paidTo.name
+    } : undefined,
+    amount: Number(s.originalAmount),
+    currency: s.currency,
+    exchangeRate: Number(s.exchangeRate),
+    baseAmount: Number(s.baseInrAmount),
+    date: s.settledAt,
+    createdAt: s.createdAt
+  };
+}
+
 export class SettlementController {
   static create = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
     const result = await SettlementService.createSettlement(req.user!.userId, req.body);
 
-    const response: ApiResponse<typeof result> = {
+    const response: ApiResponse<ReturnType<typeof mapSettlement>> = {
       success: true,
-      data: result,
+      data: mapSettlement(result),
       message: 'Settlement recorded successfully',
     };
 
@@ -40,9 +65,9 @@ export class SettlementController {
       settledAt: date,
     });
 
-    const response: ApiResponse<typeof result> = {
+    const response: ApiResponse<ReturnType<typeof mapSettlement>> = {
       success: true,
-      data: result,
+      data: mapSettlement(result),
       message: 'Settlement recorded successfully',
     };
 
@@ -52,9 +77,9 @@ export class SettlementController {
   static getAllForGroup = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
     const result = await SettlementService.getGroupSettlements(req.params.groupId as string, req.user!.userId);
 
-    const response: ApiResponse<typeof result> = {
+    const response: ApiResponse<ReturnType<typeof mapSettlement>[]> = {
       success: true,
-      data: result,
+      data: result.map(mapSettlement),
       message: 'Settlements retrieved successfully',
     };
 

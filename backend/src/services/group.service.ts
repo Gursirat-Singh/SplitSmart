@@ -146,16 +146,147 @@ export class GroupService {
     await MembershipRepository.leave(targetMembership.id);
   }
 
-  /**
-   * Computes the current net balances for the group.
-   * Ensures the requester is an active member.
-   */
   static async getGroupBalances(groupId: string, userId: string) {
     const isMember = await MembershipRepository.isActiveMember(groupId, userId);
     if (!isMember) {
       throw new ForbiddenError('You are not a member of this group');
     }
 
-    return BalanceService.computeGroupBalances(groupId);
+    const settlements = await BalanceService.computeGroupBalances(groupId);
+
+    const group = await GroupRepository.findById(groupId);
+    const usersMap = new Map();
+    group?.memberships?.forEach(m => {
+      if (m.user) {
+        usersMap.set(m.userId, { name: m.user.name, email: m.user.email });
+      }
+    });
+
+    const userBalances = new Map<string, number>();
+    group?.memberships?.forEach(m => userBalances.set(m.userId, 0));
+
+    const suggestedSettlements = [];
+
+    for (const s of settlements) {
+      // s.from owes s.to s.amount
+      const fromBal = userBalances.get(s.from) || 0;
+      userBalances.set(s.from, fromBal - s.amount);
+
+      const toBal = userBalances.get(s.to) || 0;
+      userBalances.set(s.to, toBal + s.amount);
+
+      suggestedSettlements.push({
+        from: s.from,
+        fromName: usersMap.get(s.from)?.name || 'Unknown',
+        to: s.to,
+        toName: usersMap.get(s.to)?.name || 'Unknown',
+        amount: s.amount,
+        currency: s.currency
+      });
+    }
+
+    const balances = Array.from(userBalances.entries()).map(([uId, bal]) => ({
+      userId: uId,
+      name: usersMap.get(uId)?.name || 'Unknown',
+      email: usersMap.get(uId)?.email || '',
+      balance: bal
+    }));
+
+    return {
+      balances,
+      suggestedSettlements
+    };
+  }
+
+  /**
+   * Links an imported member (ghost user) to a registered user in a group.
+   * Merges all financial and membership references.
+   */
+  static async linkMember(groupId: string, requestingUserId: string, importedMemberId: string, email: string) {
+    const isMember = await MembershipRepository.isActiveMember(groupId, requestingUserId);
+    if (!isMember) {
+      throw new ForbiddenError('You must be a member to link profiles');
+    }
+
+    const importedUser = await UserRepository.findById(importedMemberId);
+    if (!importedUser || importedUser.isRegistered) {
+      throw new NotFoundError('Imported member not found or is already registered');
+    }
+
+    const registeredUser = await UserRepository.findByEmail(email);
+    if (!registeredUser || !registeredUser.isRegistered) {
+      throw new NotFoundError('Registered user with this email not found');
+    }
+
+    // Link imported member to registered member
+    return prisma.$transaction(async (tx) => {
+      // 1. Set linkedUserId on the imported user
+      await tx.user.update({
+        where: { id: importedMemberId },
+        data: { linkedUserId: registeredUser.id },
+      });
+
+      // 2. Transfer expenses paid by imported user to registered user
+      await tx.expense.updateMany({
+        where: { groupId, paidById: importedMemberId },
+        data: { paidById: registeredUser.id },
+      });
+
+      // 3. Transfer expense shares to registered user
+      const shares = await tx.expenseShare.findMany({
+        where: { expense: { groupId }, userId: importedMemberId },
+      });
+      for (const share of shares) {
+        const existingShare = await tx.expenseShare.findFirst({
+          where: { expenseId: share.expenseId, userId: registeredUser.id },
+        });
+        if (existingShare) {
+          // Add them together
+          await tx.expenseShare.update({
+            where: { id: existingShare.id },
+            data: {
+              originalAmount: Number(existingShare.originalAmount) + Number(share.originalAmount),
+              baseInrAmount: Number(existingShare.baseInrAmount) + Number(share.baseInrAmount),
+            },
+          });
+          await tx.expenseShare.delete({ where: { id: share.id } });
+        } else {
+          await tx.expenseShare.update({
+            where: { id: share.id },
+            data: { userId: registeredUser.id },
+          });
+        }
+      }
+
+      // 4. Transfer settlements paid/received
+      await tx.settlement.updateMany({
+        where: { groupId, paidById: importedMemberId },
+        data: { paidById: registeredUser.id },
+      });
+      await tx.settlement.updateMany({
+        where: { groupId, paidToId: importedMemberId },
+        data: { paidToId: registeredUser.id },
+      });
+
+      // 5. Ensure the registered user has a membership in the group
+      const registeredMembership = await tx.groupMembership.findFirst({
+        where: { groupId, userId: registeredUser.id, leftAt: null },
+      });
+      
+      if (!registeredMembership) {
+        // Transfer the membership
+        await tx.groupMembership.updateMany({
+          where: { groupId, userId: importedMemberId },
+          data: { userId: registeredUser.id },
+        });
+      } else {
+        // If they already have a membership, just deactivate/delete the imported membership
+        await tx.groupMembership.deleteMany({
+          where: { groupId, userId: importedMemberId },
+        });
+      }
+
+      return registeredUser;
+    });
   }
 }

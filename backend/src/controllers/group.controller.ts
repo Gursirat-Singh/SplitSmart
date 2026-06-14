@@ -81,6 +81,23 @@ export class GroupController {
     res.status(200).json(response);
   });
 
+  static linkMember = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+    const result = await GroupService.linkMember(
+      req.params.groupId as string,
+      req.user!.userId,
+      req.params.userId as string,
+      req.body.email as string
+    );
+
+    const response: ApiResponse<typeof result> = {
+      success: true,
+      data: result,
+      message: 'Imported member linked successfully',
+    };
+
+    res.status(200).json(response);
+  });
+
   static getBalances = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
     const result = await GroupService.getGroupBalances(req.params.groupId as string, req.user!.userId);
 

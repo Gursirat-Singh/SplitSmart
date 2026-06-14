@@ -1,6 +1,6 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -11,7 +11,7 @@ const apiClient = axios.create({
 
 // Request interceptor to attach JWT token
 apiClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -25,7 +25,7 @@ apiClient.interceptors.request.use(
 
 // Response interceptor to handle token expiry / unauthenticated requests
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');

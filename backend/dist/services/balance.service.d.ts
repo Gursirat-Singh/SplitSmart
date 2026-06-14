@@ -7,7 +7,7 @@ export interface Balance {
 }
 export declare class BalanceService {
     /**
-     * Computes all pairwise balances in a group.
+     * Computes all pairwise balances in a group in a unified currency (INR).
      * Based on the formula: net(A→B) = debt(A→B) - debt(B→A) - settled(A→B) + settled(B→A)
      */
     static computeGroupBalances(groupId: string): Promise<Balance[]>;

@@ -25,6 +25,7 @@ enum SplitType {
   EQUAL
   EXACT
   PERCENTAGE
+  SHARE
 }
 
 /// Classification of issues found during CSV import parsing.
@@ -38,12 +39,15 @@ enum AnomalyType {
   DUPLICATE_ENTRY
   CURRENCY_MISMATCH
   OTHER
+  REFUND
+  SETTLEMENT_DETECTED
+  AMBIGUOUS_MEMBER
 }
 
 /// Whether an import anomaly caused the row to be skipped or partially imported.
 enum AnomalySeverity {
   WARNING // Row was imported with adjustments
-  ERROR   // Row was skipped entirely
+  ERROR // Row was skipped entirely
 }
 
 /// Verdict for a single row in an import batch.
@@ -79,20 +83,27 @@ enum ImportStatus {
 /// ──────────────────────────────────────────────────────────
 model User {
   id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @db.VarChar(255)
+  email        String?  @unique @db.VarChar(255)
+  passwordHash String?  @db.VarChar(255)
   name         String   @db.VarChar(100)
   createdAt    DateTime @default(now()) @db.Timestamptz()
   updatedAt    DateTime @updatedAt @db.Timestamptz()
 
+  // Imported Members fields
+  isRegistered Boolean  @default(true)
+  linkedUserId String?  @db.Uuid
+
   // ── Outgoing relations ───────────────────────────────────
   memberships         GroupMembership[]
-  createdGroups       Group[]          @relation("GroupCreator")
-  paidExpenses        Expense[]        @relation("ExpensePayer")
+  createdGroups       Group[]           @relation("GroupCreator")
+  paidExpenses        Expense[]         @relation("ExpensePayer")
   expenseShares       ExpenseShare[]
-  settlementsPaid     Settlement[]     @relation("SettlementPayer")
-  settlementsReceived Settlement[]     @relation("SettlementPayee")
+  settlementsPaid     Settlement[]      @relation("SettlementPayer")
+  settlementsReceived Settlement[]      @relation("SettlementPayee")
   imports             Import[]
+
+  linkedUser          User?             @relation("LinkedUser", fields: [linkedUserId], references: [id])
+  linkedAccounts      User[]            @relation("LinkedUser")
 
   @@map("users")
 }
@@ -186,23 +197,25 @@ model GroupMembership {
 /// to avoid polluting expense queries and balance aggregations.
 /// ──────────────────────────────────────────────────────────
 model Expense {
-  id          String    @id @default(uuid()) @db.Uuid
-  groupId     String    @db.Uuid
-  paidById    String    @db.Uuid
-  amount      Decimal   @db.Decimal(12, 2)
-  currency    Currency  @default(INR)
-  description String    @db.VarChar(300)
-  splitType   SplitType
-  expenseDate DateTime  @db.Timestamptz()
-  createdAt   DateTime  @default(now()) @db.Timestamptz()
-  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+  id             String    @id @default(uuid()) @db.Uuid
+  groupId        String    @db.Uuid
+  paidById       String    @db.Uuid
+  originalAmount Decimal   @db.Decimal(12, 2)
+  currency       Currency  @default(INR)
+  exchangeRate   Decimal   @default(1.0) @db.Decimal(10, 4)
+  baseInrAmount  Decimal   @db.Decimal(12, 2)
+  description    String    @db.VarChar(300)
+  splitType      SplitType
+  expenseDate    DateTime  @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @db.Timestamptz()
 
   // ── Relations ────────────────────────────────────────────
   /// Cascade: deleting a group removes all its expenses.
-  group  Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group      Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   /// Restrict: cannot delete a user who has paid expenses (preserve financial history).
-  paidBy User           @relation("ExpensePayer", fields: [paidById], references: [id], onDelete: Restrict)
-  shares ExpenseShare[]
+  paidBy     User           @relation("ExpensePayer", fields: [paidById], references: [id], onDelete: Restrict)
+  shares     ExpenseShare[]
   importRows ImportRow[]
 
   // ── Indexes ──────────────────────────────────────────────
@@ -232,10 +245,11 @@ model Expense {
 ///             – SUM(shares where B is userId AND expense.paidBy = A)
 /// ──────────────────────────────────────────────────────────
 model ExpenseShare {
-  id        String  @id @default(uuid()) @db.Uuid
-  expenseId String  @db.Uuid
-  userId    String  @db.Uuid
-  amount    Decimal @db.Decimal(12, 2)
+  id             String  @id @default(uuid()) @db.Uuid
+  expenseId      String  @db.Uuid
+  userId         String  @db.Uuid
+  originalAmount Decimal @db.Decimal(12, 2)
+  baseInrAmount  Decimal @db.Decimal(12, 2)
 
   // ── Relations ────────────────────────────────────────────
   /// Cascade: deleting an expense removes all its shares.
@@ -270,14 +284,16 @@ model ExpenseShare {
 ///   3. Settlement history is independently auditable
 /// ──────────────────────────────────────────────────────────
 model Settlement {
-  id        String   @id @default(uuid()) @db.Uuid
-  groupId   String   @db.Uuid
-  paidById  String   @db.Uuid
-  paidToId  String   @db.Uuid
-  amount    Decimal  @db.Decimal(12, 2)
-  currency  Currency @default(INR)
-  settledAt DateTime @default(now()) @db.Timestamptz()
-  createdAt DateTime @default(now()) @db.Timestamptz()
+  id             String   @id @default(uuid()) @db.Uuid
+  groupId        String   @db.Uuid
+  paidById       String   @db.Uuid
+  paidToId       String   @db.Uuid
+  originalAmount Decimal  @db.Decimal(12, 2)
+  currency       Currency @default(INR)
+  exchangeRate   Decimal  @default(1.0) @db.Decimal(10, 4)
+  baseInrAmount  Decimal  @db.Decimal(12, 2)
+  settledAt      DateTime @default(now()) @db.Timestamptz()
+  createdAt      DateTime @default(now()) @db.Timestamptz()
 
   // ── Relations ────────────────────────────────────────────
   /// Cascade: deleting a group removes all its settlements.
@@ -392,18 +408,18 @@ model ImportAnomaly {
 /// decision (if flagged).
 /// ──────────────────────────────────────────────────────────
 model ImportRow {
-  id         String            @id @default(uuid()) @db.Uuid
-  importId   String            @db.Uuid
+  id         String           @id @default(uuid()) @db.Uuid
+  importId   String           @db.Uuid
   rowNumber  Int
   verdict    ImportRowVerdict
-  rawData    Json              @db.JsonB
-  expenseId  String?           @db.Uuid
-  reviewedAt DateTime?         @db.Timestamptz()
-  reviewNote String?           @db.Text
+  rawData    Json             @db.JsonB
+  expenseId  String?          @db.Uuid
+  reviewedAt DateTime?        @db.Timestamptz()
+  reviewNote String?          @db.Text
 
   // ── Relations ────────────────────────────────────────────
-  import     Import   @relation(fields: [importId], references: [id], onDelete: Cascade)
-  expense    Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  import  Import   @relation(fields: [importId], references: [id], onDelete: Cascade)
+  expense Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
 
   @@unique([importId, rowNumber])
   @@index([importId, verdict])

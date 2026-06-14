@@ -58,6 +58,9 @@ app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const group_routes_1 = __importDefault(require("./routes/group.routes"));
+const expense_routes_1 = __importDefault(require("./routes/expense.routes"));
+const settlement_routes_1 = __importDefault(require("./routes/settlement.routes"));
+const import_routes_1 = __importDefault(require("./routes/import.routes"));
 // ── Route placeholders ──────────────────────────────────────────────
 const placeholderRouter = () => {
     const router = (0, express_1.Router)();
@@ -65,9 +68,9 @@ const placeholderRouter = () => {
 };
 app.use('/api/v1/auth', auth_routes_1.default);
 app.use('/api/v1/groups', group_routes_1.default);
-app.use('/api/v1/expenses', placeholderRouter());
-app.use('/api/v1/settlements', placeholderRouter());
-app.use('/api/v1/imports', placeholderRouter());
+app.use('/api/v1/expenses', expense_routes_1.default);
+app.use('/api/v1/settlements', settlement_routes_1.default);
+app.use('/api/v1/groups/:groupId/imports', import_routes_1.default);
 // ── 404 catch-all ───────────────────────────────────────────────────
 app.use((req, _res, next) => {
     next(new errors_1.NotFoundError(`Cannot find ${req.method} ${req.originalUrl}`));

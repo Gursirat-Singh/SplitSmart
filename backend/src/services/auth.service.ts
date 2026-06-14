@@ -13,16 +13,31 @@ export class AuthService {
    */
   static async register(input: RegisterInput) {
     const existingUser = await UserRepository.findByEmail(input.email);
+    
+    let user;
     if (existingUser) {
-      throw new ValidationError('Validation failed', { email: ['Email is already in use'] });
+      if (existingUser.isRegistered) {
+        throw new ValidationError('Validation failed', { email: ['Email is already in use'] });
+      }
+      // Upgrade existing imported member
+      const passwordHash = await bcrypt.hash(input.password, 10);
+      const { prisma } = require('../utils/prisma');
+      user = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          passwordHash,
+          isRegistered: true,
+          name: input.name,
+        },
+      });
+    } else {
+      const passwordHash = await bcrypt.hash(input.password, 10);
+      user = await UserRepository.create({
+        email: input.email,
+        passwordHash,
+        name: input.name,
+      });
     }
-
-    const passwordHash = await bcrypt.hash(input.password, 10);
-    const user = await UserRepository.create({
-      email: input.email,
-      passwordHash,
-      name: input.name,
-    });
 
     const token = this.generateToken(user.id, user.email);
 
@@ -43,7 +58,7 @@ export class AuthService {
    */
   static async login(input: LoginInput) {
     const user = await UserRepository.findByEmail(input.email);
-    if (!user) {
+    if (!user || !user.isRegistered || !user.passwordHash) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -67,8 +82,8 @@ export class AuthService {
   /**
    * Helper function to generate a JWT token.
    */
-  private static generateToken(userId: string, email: string): string {
-    return jwt.sign({ userId, email }, config.JWT_SECRET, {
+  private static generateToken(userId: string, email: string | null): string {
+    return jwt.sign({ userId, email: email || '' }, config.JWT_SECRET, {
       expiresIn: config.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
     });
   }

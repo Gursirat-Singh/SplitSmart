@@ -124,16 +124,47 @@ class GroupService {
         }
         await membership_repository_1.MembershipRepository.leave(targetMembership.id);
     }
-    /**
-     * Computes the current net balances for the group.
-     * Ensures the requester is an active member.
-     */
     static async getGroupBalances(groupId, userId) {
         const isMember = await membership_repository_1.MembershipRepository.isActiveMember(groupId, userId);
         if (!isMember) {
             throw new errors_1.ForbiddenError('You are not a member of this group');
         }
-        return balance_service_1.BalanceService.computeGroupBalances(groupId);
+        const settlements = await balance_service_1.BalanceService.computeGroupBalances(groupId);
+        const group = await group_repository_1.GroupRepository.findById(groupId);
+        const usersMap = new Map();
+        group?.memberships?.forEach(m => {
+            if (m.user) {
+                usersMap.set(m.userId, { name: m.user.name, email: m.user.email });
+            }
+        });
+        const userBalances = new Map();
+        group?.memberships?.forEach(m => userBalances.set(m.userId, 0));
+        const suggestedSettlements = [];
+        for (const s of settlements) {
+            // s.from owes s.to s.amount
+            const fromBal = userBalances.get(s.from) || 0;
+            userBalances.set(s.from, fromBal - s.amount);
+            const toBal = userBalances.get(s.to) || 0;
+            userBalances.set(s.to, toBal + s.amount);
+            suggestedSettlements.push({
+                from: s.from,
+                fromName: usersMap.get(s.from)?.name || 'Unknown',
+                to: s.to,
+                toName: usersMap.get(s.to)?.name || 'Unknown',
+                amount: s.amount,
+                currency: s.currency
+            });
+        }
+        const balances = Array.from(userBalances.entries()).map(([uId, bal]) => ({
+            userId: uId,
+            name: usersMap.get(uId)?.name || 'Unknown',
+            email: usersMap.get(uId)?.email || '',
+            balance: bal
+        }));
+        return {
+            balances,
+            suggestedSettlements
+        };
     }
 }
 exports.GroupService = GroupService;

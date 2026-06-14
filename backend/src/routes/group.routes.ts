@@ -37,6 +37,11 @@ router.delete(
   validate(groupIdParamSchema, 'params'),
   GroupController.removeMember
 );
+router.post(
+  '/:groupId/members/:userId/link',
+  validate(groupIdParamSchema, 'params'),
+  GroupController.linkMember
+);
 
 router.get(
   '/:groupId/balances',

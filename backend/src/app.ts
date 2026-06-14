@@ -23,6 +23,9 @@ app.use(express.json());
 
 import authRoutes from './routes/auth.routes';
 import groupRoutes from './routes/group.routes';
+import expenseRoutes from './routes/expense.routes';
+import settlementRoutes from './routes/settlement.routes';
+import importRoutes from './routes/import.routes';
 
 // ── Route placeholders ──────────────────────────────────────────────
 const placeholderRouter = (): Router => {
@@ -32,9 +35,9 @@ const placeholderRouter = (): Router => {
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/groups', groupRoutes);
-app.use('/api/v1/expenses', placeholderRouter());
-app.use('/api/v1/settlements', placeholderRouter());
-app.use('/api/v1/imports', placeholderRouter());
+app.use('/api/v1/expenses', expenseRoutes);
+app.use('/api/v1/settlements', settlementRoutes);
+app.use('/api/v1/groups/:groupId/imports', importRoutes);
 
 // ── 404 catch-all ───────────────────────────────────────────────────
 app.use((req, _res, next) => {

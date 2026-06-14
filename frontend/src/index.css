@@ -2,13 +2,32 @@
 @import "tailwindcss";
 
 @theme {
+  --color-surface: #f8f9ff;
+  --color-surface-dim: #cbdbf5;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e5eeff;
+  --color-surface-container-high: #dce9ff;
+  --color-surface-container-highest: #d3e4fe;
+  
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #45464d;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #eaf1ff;
+  
+  --color-outline: #76777d;
+  --color-outline-variant: #c6c6cd;
+  
   --color-primary: #0F172A;
   --color-primary-dark: #020617;
+  --color-on-primary: #ffffff;
   --color-primary-container: #131b2e;
   --color-on-primary-container: #7c839b;
   
   --color-secondary: #3B82F6;
   --color-secondary-dark: #2563EB;
+  --color-on-secondary: #ffffff;
   
   --color-success: #10B981;
   --color-success-light: rgba(16, 185, 129, 0.1);
@@ -19,15 +38,17 @@
   --color-surface-card: #FFFFFF;
   --color-border-subtle: #E2E8F0;
   
-  --color-outline: #76777d;
-  --color-on-surface-variant: #45464d;
-  
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
   --shadow-level-1: none;
   --shadow-level-2: 0px 4px 20px rgba(0, 0, 0, 0.05);
   --shadow-level-3: 0px 10px 30px rgba(0, 0, 0, 0.1);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
 }
 
 @layer base {

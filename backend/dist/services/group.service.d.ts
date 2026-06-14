@@ -87,9 +87,20 @@ export declare class GroupService {
      * Sets the leftAt date to effectively end their active membership.
      */
     static removeMember(groupId: string, requestingUserId: string, targetUserId: string): Promise<void>;
-    /**
-     * Computes the current net balances for the group.
-     * Ensures the requester is an active member.
-     */
-    static getGroupBalances(groupId: string, userId: string): Promise<import("./balance.service").Balance[]>;
+    static getGroupBalances(groupId: string, userId: string): Promise<{
+        balances: {
+            userId: string;
+            name: any;
+            email: any;
+            balance: number;
+        }[];
+        suggestedSettlements: {
+            from: string;
+            fromName: any;
+            to: string;
+            toName: any;
+            amount: number;
+            currency: import(".prisma/client").$Enums.Currency;
+        }[];
+    }>;
 }

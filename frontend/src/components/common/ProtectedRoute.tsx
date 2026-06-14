@@ -29,7 +29,7 @@ export const ProtectedRoute = () => {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <span className="font-mono text-sm tracking-wide text-primary/60">Loading Session...</span>
+          <span className="font-mono text-sm tracking-wide text-outline">Loading Session...</span>
         </div>
       </div>
     );

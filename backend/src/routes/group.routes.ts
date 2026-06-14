@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { GroupController } from '../controllers/group.controller';
 import { validate } from '../middleware/validate.middleware';
 import { authenticate } from '../middleware/auth.middleware';
+import { ExpenseController } from '../controllers/expense.controller';
+import { SettlementController } from '../controllers/settlement.controller';
 import {
   createGroupSchema,
   updateGroupSchema,
@@ -16,6 +18,8 @@ router.use(authenticate);
 
 router.post('/', validate(createGroupSchema), GroupController.create);
 router.get('/', GroupController.getAll);
+
+router.get('/dashboard/stats', GroupController.getDashboardStats);
 
 router.get('/:groupId', validate(groupIdParamSchema, 'params'), GroupController.getOne);
 router.patch(
@@ -47,6 +51,24 @@ router.get(
   '/:groupId/balances',
   validate(groupIdParamSchema, 'params'),
   GroupController.getBalances
+);
+
+router.get(
+  '/:groupId/balances/:userId/breakdown',
+  validate(groupIdParamSchema, 'params'),
+  GroupController.getBalanceBreakdown
+);
+
+router.get(
+  '/:groupId/expenses',
+  validate(groupIdParamSchema, 'params'),
+  ExpenseController.getAllForGroup
+);
+
+router.get(
+  '/:groupId/settlements',
+  validate(groupIdParamSchema, 'params'),
+  SettlementController.getAllForGroup
 );
 
 export default router;

@@ -4,17 +4,24 @@ const express_1 = require("express");
 const group_controller_1 = require("../controllers/group.controller");
 const validate_middleware_1 = require("../middleware/validate.middleware");
 const auth_middleware_1 = require("../middleware/auth.middleware");
+const expense_controller_1 = require("../controllers/expense.controller");
+const settlement_controller_1 = require("../controllers/settlement.controller");
 const group_schema_1 = require("../validation/group.schema");
 const router = (0, express_1.Router)();
 // All group routes require authentication
 router.use(auth_middleware_1.authenticate);
 router.post('/', (0, validate_middleware_1.validate)(group_schema_1.createGroupSchema), group_controller_1.GroupController.create);
 router.get('/', group_controller_1.GroupController.getAll);
+router.get('/dashboard/stats', group_controller_1.GroupController.getDashboardStats);
 router.get('/:groupId', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.getOne);
 router.patch('/:groupId', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), (0, validate_middleware_1.validate)(group_schema_1.updateGroupSchema), group_controller_1.GroupController.update);
 router.delete('/:groupId', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.remove);
 router.post('/:groupId/members', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), (0, validate_middleware_1.validate)(group_schema_1.addMemberSchema), group_controller_1.GroupController.addMember);
 router.delete('/:groupId/members/:userId', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.removeMember);
+router.post('/:groupId/members/:userId/link', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.linkMember);
 router.get('/:groupId/balances', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.getBalances);
+router.get('/:groupId/balances/:userId/breakdown', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.getBalanceBreakdown);
+router.get('/:groupId/expenses', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), expense_controller_1.ExpenseController.getAllForGroup);
+router.get('/:groupId/settlements', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), settlement_controller_1.SettlementController.getAllForGroup);
 exports.default = router;
 //# sourceMappingURL=group.routes.js.map

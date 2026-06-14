@@ -12,6 +12,7 @@ import { GroupExpenses } from './pages/expenses/GroupExpenses';
 import { GroupSettlements } from './pages/expenses/GroupSettlements';
 import { ImportCsv } from './pages/imports/ImportCsv';
 import { ImportReport } from './pages/imports/ImportReport';
+import { ImportCenter } from './pages/imports/ImportCenter';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="/groups/:groupId" element={<GroupDetails />} />
             <Route path="/groups/:groupId/expenses" element={<GroupExpenses />} />
             <Route path="/groups/:groupId/settlements" element={<GroupSettlements />} />
+            <Route path="/imports" element={<ImportCenter />} />
             <Route path="/groups/:groupId/import" element={<ImportCsv />} />
             <Route path="/groups/:groupId/imports/:importId" element={<ImportReport />} />
             

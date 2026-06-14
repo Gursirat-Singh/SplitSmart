@@ -22,7 +22,9 @@ const authenticate = (req, _res, next) => {
             throw new errors_1.UnauthorizedError('Missing or malformed authorization header');
         }
         const token = header.slice(7);
-        const decoded = jsonwebtoken_1.default.verify(token, config_1.config.JWT_SECRET);
+        const decoded = jsonwebtoken_1.default.verify(token, config_1.config.JWT_SECRET, {
+            algorithms: ['HS256'],
+        });
         req.user = {
             userId: decoded.userId,
             email: decoded.email,

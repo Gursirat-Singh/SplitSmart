@@ -7,9 +7,9 @@ export declare class AuthService {
      */
     static register(input: RegisterInput): Promise<{
         user: {
-            id: string;
-            email: string;
-            name: string;
+            id: any;
+            email: any;
+            name: any;
         };
         token: string;
     }>;
@@ -21,7 +21,7 @@ export declare class AuthService {
     static login(input: LoginInput): Promise<{
         user: {
             id: string;
-            email: string;
+            email: string | null;
             name: string;
         };
         token: string;

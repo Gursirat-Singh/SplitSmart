@@ -14,7 +14,9 @@ dotenv.config();
 export const config = {
   PORT: parseInt(process.env.PORT ?? '3000', 10),
   DATABASE_URL: process.env.DATABASE_URL ?? '',
-  JWT_SECRET: process.env.JWT_SECRET ?? '',
+  JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' 
+    ? (() => { throw new Error('FATAL: JWT_SECRET environment variable is required in production mode'); })()
+    : 'dev_default_super_secret_signing_key_splitsmart_2026'),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? '7d',
   NODE_ENV: process.env.NODE_ENV ?? 'development',
 } as const;

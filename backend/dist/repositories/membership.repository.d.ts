@@ -2,7 +2,7 @@ export declare class MembershipRepository {
     static findActiveMembers(groupId: string, date?: Date): Promise<({
         user: {
             id: string;
-            email: string;
+            email: string | null;
             name: string;
         };
     } & {

@@ -4,9 +4,9 @@ import { Currency, SplitType } from '@prisma/client';
 export const createExpenseSchema = z.object({
   groupId: z.string().uuid('Invalid group ID'),
   description: z.string().min(1, 'Description is required').max(300, 'Description is too long'),
-  originalAmount: z.number().positive('Amount must be positive'),
+  originalAmount: z.number().positive('Amount must be positive').max(10000000, 'Amount cannot exceed 10,000,000'),
   currency: z.nativeEnum(Currency),
-  exchangeRate: z.number().positive('Exchange rate must be positive').optional(),
+  exchangeRate: z.number().positive('Exchange rate must be positive').max(100000, 'Exchange rate cannot exceed 100,000').optional(),
   splitType: z.nativeEnum(SplitType),
   expenseDate: z.string().datetime({ message: 'Invalid ISO date string' }).or(z.date()),
   splits: z.array(

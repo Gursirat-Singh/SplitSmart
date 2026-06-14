@@ -41,21 +41,31 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const error_handler_middleware_1 = require("./middleware/error-handler.middleware");
 const errors_1 = require("./utils/errors");
+const rate_limit_middleware_1 = require("./middleware/rate-limit.middleware");
 /**
  * Configured Express application instance.
- *
- * Middleware applied (in order):
- * 1. `helmet` — sets security-related HTTP headers.
- * 2. `cors` — enables Cross-Origin Resource Sharing.
- * 3. `express.json` — parses JSON request bodies.
- *
- * Route namespaces are mounted under `/api/v1`.
  */
 const app = (0, express_1.default)();
-// ── Global middleware ────────────────────────────────────────────────
+// ── Global rate limiting & headers ───────────────────────────────────
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+const globalLimiter = (0, rate_limit_middleware_1.rateLimit)({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    message: 'Too many requests, please try again later.',
+});
+app.use(globalLimiter);
+const authLimiter = (0, rate_limit_middleware_1.rateLimit)({
+    windowMs: 15 * 60 * 1000,
+    max: 15,
+    message: 'Too many login or registration attempts. Please try again after 15 minutes.',
+});
+const uploadLimiter = (0, rate_limit_middleware_1.rateLimit)({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Too many file upload requests. Please try again after 15 minutes.',
+});
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const group_routes_1 = __importDefault(require("./routes/group.routes"));
 const expense_routes_1 = __importDefault(require("./routes/expense.routes"));
@@ -66,11 +76,11 @@ const placeholderRouter = () => {
     const router = (0, express_1.Router)();
     return router;
 };
-app.use('/api/v1/auth', auth_routes_1.default);
+app.use('/api/v1/auth', authLimiter, auth_routes_1.default);
 app.use('/api/v1/groups', group_routes_1.default);
 app.use('/api/v1/expenses', expense_routes_1.default);
 app.use('/api/v1/settlements', settlement_routes_1.default);
-app.use('/api/v1/groups/:groupId/imports', import_routes_1.default);
+app.use('/api/v1/groups/:groupId/imports', uploadLimiter, import_routes_1.default);
 // ── 404 catch-all ───────────────────────────────────────────────────
 app.use((req, _res, next) => {
     next(new errors_1.NotFoundError(`Cannot find ${req.method} ${req.originalUrl}`));

@@ -9,10 +9,14 @@ import { groupIdParamSchema } from '../validation/group.schema';
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 2 * 1024 * 1024, // 2MB limit
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+    const hasCsvExt = file.originalname.toLowerCase().endsWith('.csv');
+    const isCsvMime = file.mimetype === 'text/csv' || 
+                      file.mimetype === 'application/vnd.ms-excel' || 
+                      file.mimetype === 'application/csv';
+    if (hasCsvExt && isCsvMime) {
       cb(null, true);
     } else {
       cb(new Error('Only CSV files are allowed'));

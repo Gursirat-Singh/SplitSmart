@@ -109,4 +109,32 @@ export class GroupController {
 
     res.status(200).json(response);
   });
+
+  static getDashboardStats = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+    const result = await GroupService.getDashboardStats(req.user!.userId);
+
+    const response: ApiResponse<typeof result> = {
+      success: true,
+      data: result,
+      message: 'Dashboard stats retrieved successfully',
+    };
+
+    res.status(200).json(response);
+  });
+
+  static getBalanceBreakdown = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+    const result = await GroupService.getBalanceBreakdown(
+      req.params.groupId as string,
+      req.user!.userId,
+      req.params.userId as string
+    );
+
+    const response: ApiResponse<typeof result> = {
+      success: true,
+      data: result,
+      message: 'Balance breakdown retrieved successfully',
+    };
+
+    res.status(200).json(response);
+  });
 }

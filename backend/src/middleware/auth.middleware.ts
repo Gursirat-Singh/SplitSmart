@@ -22,7 +22,9 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
 
     const token = header.slice(7);
 
-    const decoded = jwt.verify(token, config.JWT_SECRET) as AuthPayload;
+    const decoded = jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ['HS256'],
+    }) as AuthPayload;
 
     req.user = {
       userId: decoded.userId,

@@ -96,43 +96,43 @@ export const ImportCsv = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-8 animate-fadeIn text-primary">
+      <div className="space-y-8 animate-fadeIn text-on-background">
         <div>
-          <Link to={`/groups/${groupId}`} className="inline-flex items-center gap-2 text-outline hover:text-primary transition-colors">
-            <LuArrowLeft />
+          <Link to={`/groups/${groupId}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors">
+            <LuArrowLeft size={14} />
             <span>Back to Group</span>
           </Link>
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Import Expenses from CSV</h1>
-          <p className="text-outline mt-1">Upload a exported expenses CSV file to mass import into {group?.name}.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-primary">Import Expenses from CSV</h1>
+          <p className="text-sm text-on-surface-variant mt-1">Upload an exported expenses CSV file to mass import into {group?.name}.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Upload panel */}
-          <div className="bg-surface-card border border-border-subtle p-6 rounded-2xl shadow-level-1 h-fit space-y-6">
-            <h2 className="text-lg font-bold text-primary">Upload CSV</h2>
+        <div className="fintech-bento-grid">
+          {/* Upload panel - Bento Ingestion Zone */}
+          <div className="glass-card md:col-span-4 p-6 space-y-6 h-fit">
+            <h2 className="text-base font-bold text-primary tracking-tight">Upload CSV</h2>
             
             <form onSubmit={handleUpload} className="space-y-4">
-              <div className="border-2 border-dashed border-outline hover:border-secondary/50 rounded-xl p-6 text-center cursor-pointer transition-all relative bg-surface-container-low hover:bg-surface-container">
+              <div className="border-2 border-dashed border-outline hover:border-primary rounded-xl p-8 text-center cursor-pointer transition-all relative bg-neutral-50 hover:bg-neutral-100">
                 <input
                   type="file"
                   accept=".csv"
                   onChange={handleFileChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                <LuFileText className="mx-auto text-4xl text-outline mb-2" />
+                <LuFileText className="mx-auto text-3xl text-on-surface-variant mb-3 animate-pulse" />
                 <span className="block text-sm font-semibold text-primary">
                   {file ? file.name : 'Click or drag CSV here'}
                 </span>
-                <span className="block text-xs text-outline mt-1">Accepts .csv files up to 5MB</span>
+                <span className="block text-[11px] text-on-surface-variant mt-1.5">Accepts .csv files up to 5MB</span>
               </div>
 
               <button
                 type="submit"
                 disabled={isUploading || !file}
-                className="w-full h-11 bg-secondary hover:bg-secondary-dark text-white font-semibold rounded-lg flex items-center justify-center gap-2 btn-transition disabled:opacity-50 cursor-pointer"
+                className="w-full h-11 bg-primary hover:bg-neutral-800 text-white font-medium rounded-lg flex items-center justify-center gap-2 btn-transition disabled:opacity-50 cursor-pointer shadow-sm text-sm"
               >
                 {isUploading ? 'Uploading & Processing...' : 'Upload & Process'}
               </button>
@@ -140,31 +140,30 @@ export const ImportCsv = () => {
           </div>
 
           {/* Report History */}
-          <div className="bg-surface-card border border-border-subtle p-6 rounded-2xl shadow-level-1 lg:col-span-2 space-y-6">
-            <h2 className="text-lg font-bold text-primary">Import History & Reports</h2>
+          <div className="glass-card md:col-span-8 p-6 space-y-6">
+            <h2 className="text-base font-bold text-primary tracking-tight pb-2 border-b border-outline">Import History & Reports</h2>
 
             {reports.length === 0 ? (
-              <div className="text-center py-8 text-outline text-sm">
+              <div className="text-center py-12 text-on-surface-variant text-sm">
                 No past imports recorded for this group.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {reports.map((report) => (
-                  <div key={report.id} className="bg-surface-container border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div key={report.id} className="bg-white border border-outline rounded-lg p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:border-primary transition-all">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 bg-surface-card border border-border-subtle rounded-lg text-secondary">
-                        <LuFileText size={20} />
+                      <div className="p-2 bg-primary-container rounded-lg text-primary">
+                        <LuFileText size={18} />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-primary text-sm">{report.fileName}</h4>
-                        <p className="text-xs text-outline">
+                        <h4 className="text-sm font-semibold text-primary">{report.fileName}</h4>
+                        <p className="text-[11px] text-on-surface-variant mt-0.5">
                           Uploaded on {new Date(report.createdAt).toLocaleDateString()}
                         </p>
-                        <div className="flex gap-4 mt-2 text-xs text-outline">
+                        <div className="flex flex-wrap gap-4 mt-2 text-xs text-on-surface-variant font-medium">
                           <span>Rows: {report.totalRows}</span>
                           <span>Imported: {report.importedRows}</span>
-                          <span className="flex items-center gap-1 text-warning">
-                            <LuInfo size={12} />
+                          <span className="inline-flex items-center gap-1 text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded text-[10px]">
                             Anomalies: {report.anomaliesCount}
                           </span>
                         </div>
@@ -172,20 +171,17 @@ export const ImportCsv = () => {
                     </div>
 
                     <div className="flex items-center gap-3 self-end sm:self-center">
-                      <div className="flex items-center gap-1.5 text-xs">
+                      <div className="flex items-center gap-1.5">
                         {report.status === 'COMPLETED' ? (
-                          <span className="flex items-center gap-1 text-success bg-success/10 px-2 py-1 rounded-full font-medium">
-                            <LuCheck size={12} />
+                          <span className="text-xs px-2.5 py-0.5 rounded success-badge">
                             Success
                           </span>
                         ) : report.status === 'PENDING' ? (
-                          <span className="flex items-center gap-1 text-warning bg-warning/10 px-2 py-1 rounded-full font-medium">
-                            <LuClock size={12} />
+                          <span className="text-xs px-2.5 py-0.5 rounded warning-badge">
                             Pending Review
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-error bg-error/10 px-2 py-1 rounded-full font-medium">
-                            <LuInfo size={12} />
+                          <span className="text-xs px-2.5 py-0.5 rounded error-badge">
                             Failed
                           </span>
                         )}
@@ -193,7 +189,7 @@ export const ImportCsv = () => {
                       
                       <Link
                         to={`/groups/${groupId}/imports/${report.id}`}
-                        className="bg-surface-card hover:bg-surface-container-high border border-border-subtle text-secondary hover:text-secondary-dark px-3 py-1.5 rounded-lg text-xs font-semibold btn-transition shadow-level-1"
+                        className="bg-white hover:bg-neutral-50 border border-outline text-primary px-3 py-1.5 rounded-lg text-xs font-semibold btn-transition shadow-sm"
                       >
                         View Report
                       </Link>
@@ -208,3 +204,4 @@ export const ImportCsv = () => {
     </MainLayout>
   );
 };
+

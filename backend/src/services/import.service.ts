@@ -97,6 +97,10 @@ export class ImportService {
       throw new ValidationError('CSV file is empty');
     }
 
+    if (records.length > 500) {
+      throw new ValidationError('CSV file exceeds maximum limit of 500 rows to prevent performance issues');
+    }
+
     // 3. Create Import Batch record
     const importBatch = await prisma.import.create({
       data: {
@@ -122,46 +126,71 @@ export class ImportService {
     });
 
     const emailToUserMap = new Map<string, { id: string; joinedAt: Date; leftAt: Date | null; name: string }>();
+
+    const normalizeIdentifier = (value: string) =>
+      value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+    const stripNumericSuffix = (value: string) =>
+      value.replace(/\s+\d+$/, '').trim();
+
+    const nameToMembersMap = new Map<string, { id: string; joinedAt: Date; leftAt: Date | null; name: string }[]>();
+    const indexMemberByName = (member: { id: string; joinedAt: Date; leftAt: Date | null; name: string }) => {
+      const key = normalizeIdentifier(member.name);
+      const list = nameToMembersMap.get(key) ?? [];
+      list.push(member);
+      nameToMembersMap.set(key, list);
+    };
+
     for (const gm of groupMemberships) {
+      const memberInfo = {
+        id: gm.userId,
+        joinedAt: gm.joinedAt,
+        leftAt: gm.leftAt,
+        name: gm.user.name,
+      };
+      indexMemberByName(memberInfo);
+
       if (gm.user.email) {
         emailToUserMap.set(gm.user.email!.toLowerCase().trim(), {
-          id: gm.userId,
-          joinedAt: gm.joinedAt,
-          leftAt: gm.leftAt,
-          name: gm.user.name,
+          ...memberInfo,
         });
       }
     }
 
     const resolveMember = (identifier: string): { id: string; joinedAt: Date; leftAt: Date | null; name: string } | null | 'AMBIGUOUS' => {
-      const lowerId = identifier.trim().toLowerCase();
+      const lowerId = normalizeIdentifier(identifier);
       if (!lowerId) return null;
       
       // Try exact email
       if (emailToUserMap.has(lowerId)) return emailToUserMap.get(lowerId)!;
-      
-      // Try exact name match against all members in this group
-      const matches = groupMemberships.filter(gm => gm.user.name.toLowerCase() === lowerId);
-      if (matches.length === 1) {
-        return {
-          id: matches[0]!.userId,
-          joinedAt: matches[0]!.joinedAt,
-          leftAt: matches[0]!.leftAt,
-          name: matches[0]!.user.name
-        };
+
+      // Try exact normalized name match
+      const directMatches = nameToMembersMap.get(lowerId) ?? [];
+      if (directMatches.length === 1) return directMatches[0]!;
+      if (directMatches.length > 1) return 'AMBIGUOUS';
+
+      // If identifier looks like a numbered alias (e.g. "aisha 1"), reuse base unique member.
+      const baseIdentifier = stripNumericSuffix(lowerId);
+      if (baseIdentifier !== lowerId) {
+        const baseMatches = nameToMembersMap.get(baseIdentifier) ?? [];
+        if (baseMatches.length === 1) return baseMatches[0]!;
+        if (baseMatches.length > 1) return 'AMBIGUOUS';
       }
-      if (matches.length > 1) return 'AMBIGUOUS';
+
       return null;
     };
 
     const getOrCreateImportedMember = async (identifier: string): Promise<{ id: string; joinedAt: Date; leftAt: Date | null; name: string }> => {
       const resolved = resolveMember(identifier);
-      if (resolved && resolved !== 'AMBIGUOUS') {
+      if (resolved) {
+        if (resolved === 'AMBIGUOUS') {
+          throw new ValidationError(`Ambiguous member identifier "${identifier}". Use unique emails in CSV to prevent duplicate placeholders.`);
+        }
         return resolved;
       }
       
       let email: string | null = null;
-      let name = identifier.trim();
+      let name = identifier.trim().replace(/\s+/g, ' ');
       if (identifier.includes('@')) {
         email = identifier.trim().toLowerCase();
         name = email.split('@')[0] || name;
@@ -206,12 +235,17 @@ export class ImportService {
       if (email) {
         emailToUserMap.set(email, memberInfo);
       }
+      indexMemberByName(memberInfo);
       
       return memberInfo;
     };
 
     // We process each row. Since we want an audit trail of ImportAnomaly and ImportRow, we will handle exceptions row by row.
     for (let index = 0; index < records.length; index++) {
+      // Yield event loop execution every 50 rows to keep the server responsive
+      if (index > 0 && index % 50 === 0) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
       const rowNum = index + 1;
       const rawRow = records[index];
       const anomalies: { type: AnomalyType; severity: AnomalySeverity; field?: string; message: string }[] = [];
@@ -371,12 +405,17 @@ export class ImportService {
 
       for (const part of splitParts) {
         if (splitTypeStr === 'EQUAL') {
-          // Can be just email
-          if (part.includes(':')) {
+          // Can be just email/name, or email/name with space/colon and numeric share
+          const match = part.match(/^(.*?)[:\s]+([\d.]+%?)$/);
+          if (match) {
+            const email = match[1]!.trim().toLowerCase();
+            const shareVal = parseFloat(match[2]!.replace('%', ''));
+            parsedSplits.push({ email, share: shareVal });
+          } else if (part.includes(':')) {
             const [email, shareVal] = part.split(':');
             parsedSplits.push({ email: email!.trim().toLowerCase(), share: parseFloat(shareVal!.trim()) });
           } else {
-            parsedSplits.push({ email: part.toLowerCase() });
+            parsedSplits.push({ email: part.trim().toLowerCase() });
           }
         } else {
           // Allow spaces or colons: 'Aisha 1' or 'Aisha:1' or 'Aisha 30%'
@@ -818,7 +857,7 @@ export class ImportService {
    * Resolves a flagged duplicate import row.
    * Action = ACCEPT creates the expense, action = SKIP marks it as SKIPPED.
    */
-  static async resolveDuplicate(groupId: string, userId: string, importId: string, rowId: string, action: 'ACCEPT' | 'SKIP') {
+  static async resolveDuplicate(groupId: string, userId: string, importId: string, rowId: string, action: 'ACCEPT' | 'SKIP' | 'REPLACE') {
     // 1. Verify group membership
     const membership = await prisma.groupMembership.findFirst({
       where: {
@@ -830,6 +869,14 @@ export class ImportService {
 
     if (!membership) {
       throw new ForbiddenError('Only active group members can resolve imports');
+    }
+
+    // Verify that the import batch belongs to the specified group
+    const importBatch = await prisma.import.findFirst({
+      where: { id: importId, groupId },
+    });
+    if (!importBatch) {
+      throw new NotFoundError('Import batch not found for this group');
     }
 
     // 2. Fetch the import row
@@ -940,11 +987,30 @@ export class ImportService {
     }
 
     return prisma.$transaction(async (tx) => {
-      // If this is a settlement, maybe create a Settlement instead?
-      // Wait, if the user clicked ACCEPT, we create an Expense right now because the frontend calls it `expense.create`.
-      // The user said: "Do NOT automatically convert to Settlement. Flag as SETTLEMENT_DETECTED. REVIEW_REQUIRED."
-      // If the user accepts it via resolveDuplicate, they are accepting the row.
-      // We will create it as an Expense for now because they explicitly didn't want automatic conversions. Wait, if they review it, how do they convert it to a Settlement? The backend doesn't have an endpoint for that. We'll stick to the assignment rule: avoid silent financial assumptions. Inserting as Expense correctly leaves the burden on the user.
+      if (action === 'REPLACE') {
+        const minDate = new Date(expenseDate);
+        minDate.setDate(minDate.getDate() - 7);
+        const maxDate = new Date(expenseDate);
+        maxDate.setDate(maxDate.getDate() + 7);
+
+        const possibleDuplicate = await tx.expense.findFirst({
+          where: {
+            groupId,
+            description,
+            baseInrAmount,
+            expenseDate: {
+              gte: minDate,
+              lte: maxDate,
+            },
+          },
+        });
+
+        if (possibleDuplicate) {
+          await tx.expense.delete({
+            where: { id: possibleDuplicate.id },
+          });
+        }
+      }
 
       const expense = await tx.expense.create({
         data: {
@@ -1032,6 +1098,29 @@ export class ImportService {
             calculatedShares.push({ userId: split.userId, originalAmount: oRounded, baseInrAmount: bRounded });
           }
         }
+      } else if (splitTypeStr === 'SHARE') {
+        const splitCount = resolvedSplits.length;
+        let originalSum = 0;
+        let baseInrSum = 0;
+        const totalShares = resolvedSplits.reduce((acc, curr) => acc + (curr.share || 0), 0);
+
+        for (let i = 0; i < splitCount; i++) {
+          const split = resolvedSplits[i]!;
+          const ratio = (split.share || 0) / totalShares;
+          if (i === splitCount - 1) {
+            calculatedShares.push({
+              userId: split.userId,
+              originalAmount: roundCurrency(originalAmount - originalSum),
+              baseInrAmount: roundCurrency(baseInrAmount - baseInrSum),
+            });
+          } else {
+            const oRounded = roundCurrency(originalAmount * ratio);
+            const bRounded = roundCurrency(baseInrAmount * ratio);
+            originalSum += oRounded;
+            baseInrSum += bRounded;
+            calculatedShares.push({ userId: split.userId, originalAmount: oRounded, baseInrAmount: bRounded });
+          }
+        }
       }
 
       await tx.expenseShare.createMany({
@@ -1050,7 +1139,7 @@ export class ImportService {
           verdict: ImportRowVerdict.ACCEPTED,
           expenseId: expense.id,
           reviewedAt: new Date(),
-          reviewNote: 'User approved suspect duplicate.',
+          reviewNote: action === 'REPLACE' ? 'User replaced original expense with duplicate.' : 'User approved suspect duplicate.',
         },
       });
 
@@ -1109,6 +1198,64 @@ export class ImportService {
       throw new NotFoundError('Import report not found');
     }
 
-    return importBatch;
+    // For duplicate anomalies, find the matching original expense in the DB
+    const anomaliesWithDuplicates = await Promise.all(
+      importBatch.anomalies.map(async (anomaly) => {
+        if (anomaly.type === AnomalyType.DUPLICATE_ENTRY && anomaly.rawData) {
+          const rawRow = anomaly.rawData as any;
+          const description = (rawRow.description || '').trim();
+          const originalAmount = parseFloat(rawRow.originalAmount);
+          const exchangeRate = rawRow.exchangeRate ? parseFloat(rawRow.exchangeRate) : 1.0;
+          const baseInrAmount = roundCurrency(originalAmount * exchangeRate);
+          let safeDateStr = rawRow.expenseDate;
+          if (/^\d{2}-\d{2}-\d{4}$/.test(safeDateStr)) {
+            const [dd, mm, yyyy] = safeDateStr.split('-');
+            safeDateStr = `${yyyy}-${mm}-${dd}`;
+          }
+          const expenseDate = new Date(safeDateStr);
+          const minDate = new Date(expenseDate);
+          minDate.setDate(minDate.getDate() - 7);
+          const maxDate = new Date(expenseDate);
+          maxDate.setDate(maxDate.getDate() + 7);
+
+          const originalExpense = await prisma.expense.findFirst({
+            where: {
+              groupId,
+              description,
+              baseInrAmount,
+              expenseDate: {
+                gte: minDate,
+                lte: maxDate,
+              },
+            },
+            include: {
+              paidBy: {
+                select: { id: true, name: true, email: true }
+              }
+            }
+          });
+
+          if (originalExpense) {
+            return {
+              ...anomaly,
+              originalExpense: {
+                id: originalExpense.id,
+                description: originalExpense.description,
+                originalAmount: Number(originalExpense.originalAmount),
+                currency: originalExpense.currency,
+                expenseDate: originalExpense.expenseDate,
+                paidBy: originalExpense.paidBy.name,
+              }
+            };
+          }
+        }
+        return anomaly;
+      })
+    );
+
+    return {
+      ...importBatch,
+      anomalies: anomaliesWithDuplicates,
+    };
   }
 }

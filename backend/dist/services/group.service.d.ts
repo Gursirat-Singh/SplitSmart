@@ -30,10 +30,11 @@ export declare class GroupService {
      * Retrieves a specific group by ID, ensuring the user is an active member.
      */
     static getGroupById(groupId: string, userId: string): Promise<{
+        pendingReviewsCount: number;
         memberships: ({
             user: {
                 id: string;
-                email: string;
+                email: string | null;
                 name: string;
             };
         } & {
@@ -45,10 +46,9 @@ export declare class GroupService {
         })[];
         createdBy: {
             id: string;
-            email: string;
+            email: string | null;
             name: string;
         };
-    } & {
         id: string;
         name: string;
         createdAt: Date;
@@ -102,5 +102,61 @@ export declare class GroupService {
             amount: number;
             currency: import(".prisma/client").$Enums.Currency;
         }[];
+    }>;
+    /**
+     * Links an imported member (ghost user) to a registered user in a group.
+     * Merges all financial and membership references.
+     */
+    static linkMember(groupId: string, requestingUserId: string, importedMemberId: string, email: string): Promise<{
+        id: string;
+        email: string | null;
+        passwordHash: string | null;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        isRegistered: boolean;
+        linkedUserId: string | null;
+    }>;
+    static getDashboardStats(userId: string): Promise<{
+        totalGroups: number;
+        totalExpenses: number;
+        totalSettlements: number;
+        totalOutstandingDebt: number;
+        totalImportedRecords: number;
+        recentExpenses: {
+            id: string;
+            groupId: string;
+            groupName: string;
+            description: string;
+            originalAmount: number;
+            currency: import(".prisma/client").$Enums.Currency;
+            baseInrAmount: number;
+            paidById: string;
+            paidByName: string;
+            expenseDate: Date;
+        }[];
+        recentSettlements: {
+            id: string;
+            groupId: string;
+            groupName: string;
+            paidById: string;
+            paidByName: string;
+            paidToId: string;
+            paidToName: string;
+            originalAmount: number;
+            currency: import(".prisma/client").$Enums.Currency;
+            baseInrAmount: number;
+            settledAt: Date;
+        }[];
+    }>;
+    static getBalanceBreakdown(groupId: string, userId: string, targetUserId: string): Promise<{
+        userId: string;
+        userName: string;
+        userEmail: string | null;
+        netBalance: number;
+        expensesOwed: any[];
+        expensesLent: any[];
+        settlementsPaid: any[];
+        settlementsReceived: any[];
     }>;
 }

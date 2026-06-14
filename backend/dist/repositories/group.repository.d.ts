@@ -15,7 +15,7 @@ export declare class GroupRepository {
         memberships: ({
             user: {
                 id: string;
-                email: string;
+                email: string | null;
                 name: string;
             };
         } & {
@@ -27,7 +27,7 @@ export declare class GroupRepository {
         })[];
         createdBy: {
             id: string;
-            email: string;
+            email: string | null;
             name: string;
         };
     } & {

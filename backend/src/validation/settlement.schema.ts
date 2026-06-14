@@ -4,9 +4,9 @@ import { Currency } from '@prisma/client';
 export const createSettlementSchema = z.object({
   groupId: z.string().uuid('Invalid group ID'),
   paidToId: z.string().uuid('Invalid payee user ID'),
-  originalAmount: z.number().positive('Amount must be positive'),
+  originalAmount: z.number().positive('Amount must be positive').max(10000000, 'Amount cannot exceed 10,000,000'),
   currency: z.nativeEnum(Currency),
-  exchangeRate: z.number().positive('Exchange rate must be positive').optional(),
+  exchangeRate: z.number().positive('Exchange rate must be positive').max(100000, 'Exchange rate cannot exceed 100,000').optional(),
   settledAt: z.string().datetime({ message: 'Invalid ISO date string' }).or(z.date()).optional(),
 }).refine(
   (data) => {

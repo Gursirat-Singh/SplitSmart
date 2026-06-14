@@ -17,15 +17,31 @@ class AuthService {
      */
     static async register(input) {
         const existingUser = await user_repository_1.UserRepository.findByEmail(input.email);
+        let user;
         if (existingUser) {
-            throw new errors_1.ValidationError('Validation failed', { email: ['Email is already in use'] });
+            if (existingUser.isRegistered) {
+                throw new errors_1.ValidationError('Validation failed', { email: ['Email is already in use'] });
+            }
+            // Upgrade existing imported member
+            const passwordHash = await bcryptjs_1.default.hash(input.password, 10);
+            const { prisma } = require('../utils/prisma');
+            user = await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                    passwordHash,
+                    isRegistered: true,
+                    name: input.name,
+                },
+            });
         }
-        const passwordHash = await bcryptjs_1.default.hash(input.password, 10);
-        const user = await user_repository_1.UserRepository.create({
-            email: input.email,
-            passwordHash,
-            name: input.name,
-        });
+        else {
+            const passwordHash = await bcryptjs_1.default.hash(input.password, 10);
+            user = await user_repository_1.UserRepository.create({
+                email: input.email,
+                passwordHash,
+                name: input.name,
+            });
+        }
         const token = this.generateToken(user.id, user.email);
         return {
             user: {
@@ -43,7 +59,7 @@ class AuthService {
      */
     static async login(input) {
         const user = await user_repository_1.UserRepository.findByEmail(input.email);
-        if (!user) {
+        if (!user || !user.isRegistered || !user.passwordHash) {
             throw new errors_1.UnauthorizedError('Invalid email or password');
         }
         const isPasswordValid = await bcryptjs_1.default.compare(input.password, user.passwordHash);
@@ -64,7 +80,7 @@ class AuthService {
      * Helper function to generate a JWT token.
      */
     static generateToken(userId, email) {
-        return jsonwebtoken_1.default.sign({ userId, email }, config_1.config.JWT_SECRET, {
+        return jsonwebtoken_1.default.sign({ userId, email: email || '' }, config_1.config.JWT_SECRET, {
             expiresIn: config_1.config.JWT_EXPIRES_IN,
         });
     }

@@ -54,9 +54,12 @@ export class ImportController {
           id: anomaly.id,
           reportId: importBatch.id,
           rowNumber: anomaly.rowNumber,
+          type: anomaly.type,
+          severity: anomaly.severity,
           rowData: JSON.stringify(anomaly.rawData ?? row?.rawData ?? {}, null, 2),
           reason: anomaly.message,
           resolved: row ? row.verdict !== 'FLAGGED' : false,
+          originalExpense: anomaly.originalExpense || null,
         };
       }),
     };
@@ -123,7 +126,7 @@ export class ImportController {
     const { rowId, anomalyId } = req.body as {
       rowId?: string;
       anomalyId?: string;
-      action: 'ACCEPT' | 'SKIP' | 'IMPORT';
+      action: 'ACCEPT' | 'SKIP' | 'IMPORT' | 'REPLACE';
     };
     const action = req.body.action === 'IMPORT' ? 'ACCEPT' : req.body.action;
 
@@ -164,7 +167,7 @@ export class ImportController {
       userId,
       importId as string,
       targetRowId,
-      action as 'ACCEPT' | 'SKIP'
+      action as 'ACCEPT' | 'SKIP' | 'REPLACE'
     );
 
     const response: ApiResponse = {

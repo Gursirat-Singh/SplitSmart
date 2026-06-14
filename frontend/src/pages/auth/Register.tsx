@@ -37,78 +37,108 @@ export const Register = () => {
   };
 
   return (
-    <main className="min-h-screen bg-bg-canvas flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-surface-card border border-border-subtle rounded-2xl p-8 shadow-level-3">
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <LuWallet className="text-4xl text-secondary" />
-          <span className="text-2xl font-bold tracking-tight text-primary">SplitSmart</span>
+    <main className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
+      {/* Left panel: Dark branding wing panel */}
+      <div className="w-full md:w-1/2 bg-primary p-8 md:p-16 flex flex-col justify-between text-white relative z-10 min-h-[40vh] md:min-h-screen">
+        {/* Brand Header */}
+        <div className="flex items-center gap-3">
+          <LuWallet className="text-2xl text-white opacity-80" />
+          <span className="font-bold text-lg tracking-tight text-white">SplitSmart</span>
         </div>
-        <h2 className="text-xl font-semibold text-primary text-center mb-2">Create Account</h2>
-        <p className="text-outline text-center text-sm mb-6">Sign up to get started</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">Full Name</label>
-            <div className="relative flex items-center">
-              <LuUser className="absolute left-3 text-outline" />
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full h-11 bg-surface-card border border-border-subtle rounded-lg pl-10 pr-4 text-primary placeholder-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/50 text-sm"
-              />
-            </div>
+        
+        {/* Main Headings */}
+        <div className="my-auto space-y-6 max-w-lg">
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">Master your shared expenses with precision.</h1>
+          <p className="text-sm md:text-base text-neutral-400 font-medium">
+            The most secure way to track, split, and settle debts with friends, family, and colleagues.
+          </p>
+        </div>
+
+        {/* Dynamic Minimal Card Accent */}
+        <div className="border border-neutral-800 bg-neutral-900/50 p-6 rounded-xl">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">REAL-TIME SETTLEMENTS</p>
+          <p className="text-sm text-neutral-200 font-medium">Join over 50,000 users managing their daily finances effortlessly.</p>
+        </div>
+      </div>
+
+      {/* Right panel: Clean minimal white canvas */}
+      <div className="w-full md:w-1/2 bg-surface flex items-center justify-center p-8 md:p-16">
+        <div className="w-full max-w-md space-y-8">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-primary tracking-tight">Create Account</h2>
+            <p className="text-sm text-on-surface-variant">Sign up to get started</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">Email Address</label>
-            <div className="relative flex items-center">
-              <LuMail className="absolute left-3 text-outline" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full h-11 bg-surface-card border border-border-subtle rounded-lg pl-10 pr-4 text-primary placeholder-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/50 text-sm"
-              />
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-primary uppercase tracking-wider">Full Name</label>
+              <div className="relative flex items-center">
+                <LuUser className="absolute left-3.5 text-on-surface-variant text-base" />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full h-11 bg-white border border-outline rounded-lg pl-11 pr-4 text-primary font-normal placeholder:text-neutral-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm transition-all"
+                />
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">Password</label>
-            <div className="relative flex items-center">
-              <LuLock className="absolute left-3 text-outline" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 characters"
-                className="w-full h-11 bg-surface-card border border-border-subtle rounded-lg pl-10 pr-10 text-primary placeholder-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/50 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-outline hover:text-primary transition-colors"
-              >
-                {showPassword ? <LuEyeOff size={18} /> : <LuEye size={18} />}
-              </button>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-primary uppercase tracking-wider">Email Address</label>
+              <div className="relative flex items-center">
+                <LuMail className="absolute left-3.5 text-on-surface-variant text-base" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full h-11 bg-white border border-outline rounded-lg pl-11 pr-4 text-primary font-normal placeholder:text-neutral-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm transition-all"
+                />
+              </div>
             </div>
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full h-11 bg-secondary hover:bg-secondary-dark text-white font-semibold rounded-lg flex items-center justify-center gap-2 btn-transition disabled:opacity-50"
-          >
-            {isSubmitting ? 'Creating Account...' : 'Register'}
-            <LuArrowRight />
-          </button>
-        </form>
-        <p className="text-center text-sm text-outline mt-6">
-          Already have an account?{' '}
-          <Link to="/login" className="text-secondary hover:underline font-medium">Sign In</Link>
-        </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-primary uppercase tracking-wider">Password</label>
+              <div className="relative flex items-center">
+                <LuLock className="absolute left-3.5 text-on-surface-variant text-base" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="w-full h-11 bg-white border border-outline rounded-lg pl-11 pr-11 text-primary font-normal placeholder:text-neutral-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 text-on-surface-variant hover:text-primary transition-colors focus:outline-none"
+                >
+                  {showPassword ? <LuEyeOff size={18} /> : <LuEye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-11 bg-primary hover:bg-neutral-800 text-white font-medium rounded-lg flex items-center justify-center gap-2 btn-transition disabled:opacity-50 shadow-sm text-sm cursor-pointer"
+            >
+              <span>{isSubmitting ? 'Creating Account...' : 'Register'}</span>
+              <LuArrowRight className="text-base" />
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-on-surface-variant mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:underline font-semibold">Sign In</Link>
+          </p>
+        </div>
       </div>
     </main>
   );
 };
+

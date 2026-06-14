@@ -66,12 +66,39 @@ GroupController.removeMember = (0, helpers_1.catchAsync)(async (req, res, _next)
     };
     res.status(200).json(response);
 });
+GroupController.linkMember = (0, helpers_1.catchAsync)(async (req, res, _next) => {
+    const result = await group_service_1.GroupService.linkMember(req.params.groupId, req.user.userId, req.params.userId, req.body.email);
+    const response = {
+        success: true,
+        data: result,
+        message: 'Imported member linked successfully',
+    };
+    res.status(200).json(response);
+});
 GroupController.getBalances = (0, helpers_1.catchAsync)(async (req, res, _next) => {
     const result = await group_service_1.GroupService.getGroupBalances(req.params.groupId, req.user.userId);
     const response = {
         success: true,
         data: result,
         message: 'Group balances retrieved successfully',
+    };
+    res.status(200).json(response);
+});
+GroupController.getDashboardStats = (0, helpers_1.catchAsync)(async (req, res, _next) => {
+    const result = await group_service_1.GroupService.getDashboardStats(req.user.userId);
+    const response = {
+        success: true,
+        data: result,
+        message: 'Dashboard stats retrieved successfully',
+    };
+    res.status(200).json(response);
+});
+GroupController.getBalanceBreakdown = (0, helpers_1.catchAsync)(async (req, res, _next) => {
+    const result = await group_service_1.GroupService.getBalanceBreakdown(req.params.groupId, req.user.userId, req.params.userId);
+    const response = {
+        success: true,
+        data: result,
+        message: 'Balance breakdown retrieved successfully',
     };
     res.status(200).json(response);
 });

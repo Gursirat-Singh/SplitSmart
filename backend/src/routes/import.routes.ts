@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { importIdParamSchema, resolveDuplicateSchema } from '../validation/import.schema';
 import { groupIdParamSchema } from '../validation/group.schema';
+import { uploadLimiter } from '../middleware/rate-limit.middleware';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -39,6 +40,7 @@ router.get(
 // POST /api/v1/groups/:groupId/imports
 router.post(
   '/',
+  uploadLimiter,
   validate(groupIdParamSchema, 'params'),
   upload.single('file'),
   ImportController.uploadCSV
@@ -47,6 +49,7 @@ router.post(
 // POST /api/v1/groups/:groupId/imports/upload
 router.post(
   '/upload',
+  uploadLimiter,
   validate(groupIdParamSchema, 'params'),
   upload.single('file'),
   ImportController.uploadCSV

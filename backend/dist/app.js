@@ -36,6 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.uploadLimiter = void 0;
 const express_1 = __importStar(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -67,7 +68,7 @@ const authLimiter = (0, rate_limit_middleware_1.rateLimit)({
     max: 15,
     message: 'Too many login or registration attempts. Please try again after 15 minutes.',
 });
-const uploadLimiter = (0, rate_limit_middleware_1.rateLimit)({
+exports.uploadLimiter = (0, rate_limit_middleware_1.rateLimit)({
     windowMs: 15 * 60 * 1000,
     max: 10,
     message: 'Too many file upload requests. Please try again after 15 minutes.',
@@ -86,7 +87,7 @@ app.use('/api/v1/auth', authLimiter, auth_routes_1.default);
 app.use('/api/v1/groups', group_routes_1.default);
 app.use('/api/v1/expenses', expense_routes_1.default);
 app.use('/api/v1/settlements', settlement_routes_1.default);
-app.use('/api/v1/groups/:groupId/imports', uploadLimiter, import_routes_1.default);
+app.use('/api/v1/groups/:groupId/imports', import_routes_1.default);
 // ── 404 catch-all ───────────────────────────────────────────────────
 app.use((req, _res, next) => {
     next(new errors_1.NotFoundError(`Cannot find ${req.method} ${req.originalUrl}`));

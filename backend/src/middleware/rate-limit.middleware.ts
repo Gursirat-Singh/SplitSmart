@@ -7,8 +7,6 @@ interface RateLimitStore {
   };
 }
 
-const stores: { [windowMs: number]: RateLimitStore } = {};
-
 export interface RateLimitOptions {
   windowMs: number;
   max: number;
@@ -21,11 +19,7 @@ export interface RateLimitOptions {
  */
 export const rateLimit = (options: RateLimitOptions) => {
   const { windowMs, max, message } = options;
-  
-  if (!stores[windowMs]) {
-    stores[windowMs] = {};
-  }
-  const store = stores[windowMs]!;
+  const store: RateLimitStore = {};
 
   return (req: Request, res: Response, next: NextFunction): void => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
@@ -53,3 +47,23 @@ export const rateLimit = (options: RateLimitOptions) => {
     next();
   };
 };
+
+export const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: 'Too many requests, please try again later.',
+});
+
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: 'Too many login or registration attempts. Please try again after 15 minutes.',
+});
+
+export const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Too many file upload requests. Please try again after 15 minutes.',
+});
+
+

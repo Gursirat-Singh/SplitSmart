@@ -36,7 +36,7 @@ const authLimiter = rateLimit({
   message: 'Too many login or registration attempts. Please try again after 15 minutes.',
 });
 
-const uploadLimiter = rateLimit({
+export const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: 'Too many file upload requests. Please try again after 15 minutes.',
@@ -58,7 +58,7 @@ app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/expenses', expenseRoutes);
 app.use('/api/v1/settlements', settlementRoutes);
-app.use('/api/v1/groups/:groupId/imports', uploadLimiter, importRoutes);
+app.use('/api/v1/groups/:groupId/imports', importRoutes);
 
 // ── 404 catch-all ───────────────────────────────────────────────────
 app.use((req, _res, next) => {

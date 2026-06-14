@@ -10,6 +10,10 @@ import {
   addMemberSchema,
   groupIdParamSchema,
 } from '../validation/group.schema';
+import {
+  createNestedSettlementSchema,
+  settlementIdParamSchema,
+} from '../validation/settlement.schema';
 
 const router = Router();
 
@@ -69,6 +73,19 @@ router.get(
   '/:groupId/settlements',
   validate(groupIdParamSchema, 'params'),
   SettlementController.getAllForGroup
+);
+
+router.post(
+  '/:groupId/settlements',
+  validate(groupIdParamSchema, 'params'),
+  validate(createNestedSettlementSchema),
+  SettlementController.createNested
+);
+
+router.delete(
+  '/:groupId/settlements/:settlementId',
+  validate(groupIdParamSchema.merge(settlementIdParamSchema), 'params'),
+  SettlementController.deleteNested
 );
 
 export default router;

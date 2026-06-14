@@ -7,6 +7,7 @@ const auth_middleware_1 = require("../middleware/auth.middleware");
 const expense_controller_1 = require("../controllers/expense.controller");
 const settlement_controller_1 = require("../controllers/settlement.controller");
 const group_schema_1 = require("../validation/group.schema");
+const settlement_schema_1 = require("../validation/settlement.schema");
 const router = (0, express_1.Router)();
 // All group routes require authentication
 router.use(auth_middleware_1.authenticate);
@@ -23,5 +24,7 @@ router.get('/:groupId/balances', (0, validate_middleware_1.validate)(group_schem
 router.get('/:groupId/balances/:userId/breakdown', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), group_controller_1.GroupController.getBalanceBreakdown);
 router.get('/:groupId/expenses', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), expense_controller_1.ExpenseController.getAllForGroup);
 router.get('/:groupId/settlements', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), settlement_controller_1.SettlementController.getAllForGroup);
+router.post('/:groupId/settlements', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema, 'params'), (0, validate_middleware_1.validate)(settlement_schema_1.createNestedSettlementSchema), settlement_controller_1.SettlementController.createNested);
+router.delete('/:groupId/settlements/:settlementId', (0, validate_middleware_1.validate)(group_schema_1.groupIdParamSchema.merge(settlement_schema_1.settlementIdParamSchema), 'params'), settlement_controller_1.SettlementController.deleteNested);
 exports.default = router;
 //# sourceMappingURL=group.routes.js.map

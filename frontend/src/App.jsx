@@ -1,122 +1,99 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { MainLayout } from './components/layout/MainLayout';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
+
+// Placeholders for Dashboard and Groups until we code them
+const DashboardPlaceholder = () => (
+  <MainLayout>
+    <div className="space-y-6">
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-primary">Financial Dashboard</h1>
+          <p className="text-on-surface-variant mt-1">Real-time overview of your active debts, settlements, and summaries.</p>
+        </div>
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-xl border border-border-subtle shadow-level-1 card-hover">
+          <p className="text-xs font-semibold text-outline tracking-wider uppercase">Total Balance</p>
+          <p className="text-3xl font-mono font-semibold text-secondary mt-2">$0.00</p>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-border-subtle shadow-level-1 card-hover">
+          <p className="text-xs font-semibold text-outline tracking-wider uppercase">You Owe</p>
+          <p className="text-3xl font-mono font-semibold text-error mt-2">$0.00</p>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-border-subtle shadow-level-1 card-hover">
+          <p className="text-xs font-semibold text-outline tracking-wider uppercase">You Are Owed</p>
+          <p className="text-3xl font-mono font-semibold text-success mt-2">$0.00</p>
+        </div>
+      </div>
+      <div className="bg-white p-8 rounded-2xl border border-border-subtle">
+        <h2 className="text-lg font-semibold mb-4 text-primary">Recent Activity</h2>
+        <p className="text-sm text-outline">You are fully settled up! Create or join a group to start adding expenses.</p>
+      </div>
+    </div>
+  </MainLayout>
+);
+
+const GroupsPlaceholder = () => (
+  <MainLayout>
+    <div className="space-y-6">
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-primary">My Groups</h1>
+          <p className="text-on-surface-variant mt-1">Manage, add members, and split expenses inside your groups.</p>
+        </div>
+      </header>
+      <div className="bg-white p-8 rounded-2xl border border-border-subtle text-center max-w-lg mx-auto mt-12">
+        <p className="text-outline mb-6">No groups joined yet. Create your first group to start splitting costs.</p>
+        <button className="btn-transition bg-secondary text-white font-medium px-6 py-2.5 rounded-lg hover:bg-secondary-dark shadow-level-2">
+          Create New Group
+        </button>
+      </div>
+    </div>
+  </MainLayout>
+);
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <BrowserRouter>
+      <AuthProvider>
+        <Toaster 
+          position="top-right" 
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#FFFFFF',
+              color: '#0F172A',
+              border: '1px solid #E2E8F0',
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '14px',
+            },
+          }} 
+        />
+        <Routes>
+          {/* Public Authentication Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-      <div className="ticks"></div>
+          {/* Protected Main Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<DashboardPlaceholder />} />
+            <Route path="/groups" element={<GroupsPlaceholder />} />
+            {/* Catch-all redirected to dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {/* Fallback Catch-All */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

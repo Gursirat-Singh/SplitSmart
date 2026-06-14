@@ -68,6 +68,16 @@ export class ImportService {
     });
   }
 
+  static parseDateString(dateStr: string): string {
+    if (!dateStr) return dateStr;
+    const match = dateStr.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+    if (match) {
+      const [_, dd, mm, yyyy] = match;
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return dateStr;
+  }
+
   /**
    * Processes an uploaded CSV file, performing validation, duplicate detection, and batch logging.
    */
@@ -283,11 +293,7 @@ export class ImportService {
       if (!expenseDateStr) {
         anomalies.push({ type: AnomalyType.MISSING_FIELD, severity: AnomalySeverity.WARNING, field: 'expenseDate', message: 'Expense date is missing; defaulted to today' });
       } else {
-        let safeDateStr = expenseDateStr;
-        if (/^\d{2}-\d{2}-\d{4}$/.test(safeDateStr)) {
-          const [dd, mm, yyyy] = safeDateStr.split('-');
-          safeDateStr = `${yyyy}-${mm}-${dd}`;
-        }
+        const safeDateStr = ImportService.parseDateString(expenseDateStr);
         const parsedDate = new Date(safeDateStr);
         if (isNaN(parsedDate.getTime())) {
           anomalies.push({ type: AnomalyType.INVALID_DATE, severity: AnomalySeverity.WARNING, field: 'expenseDate', message: 'Invalid date format; defaulted to today' });
@@ -650,26 +656,35 @@ export class ImportService {
 
           if (splitTypeStr === 'EQUAL') {
             const shareCount = uniqueParticipants.length;
-            const originalShareBase = originalAmount / shareCount;
-            const baseInrShareBase = baseInrAmount / shareCount;
+            const originalShareBase = roundCurrency(originalAmount / shareCount);
+            const baseInrShareBase = roundCurrency(baseInrAmount / shareCount);
             let originalSum = 0;
             let baseInrSum = 0;
 
             for (let i = 0; i < shareCount; i++) {
               const uId = uniqueParticipants[i]!;
-              if (i === shareCount - 1) {
-                calculatedShares.push({
-                  userId: uId,
-                  originalAmount: roundCurrency(originalAmount - originalSum),
-                  baseInrAmount: roundCurrency(baseInrAmount - baseInrSum),
-                });
-              } else {
-                const oRounded = roundCurrency(originalShareBase);
-                const bRounded = roundCurrency(baseInrShareBase);
-                originalSum += oRounded;
-                baseInrSum += bRounded;
-                calculatedShares.push({ userId: uId, originalAmount: oRounded, baseInrAmount: bRounded });
-              }
+              calculatedShares.push({
+                userId: uId,
+                originalAmount: originalShareBase,
+                baseInrAmount: baseInrShareBase,
+              });
+              originalSum += originalShareBase;
+              baseInrSum += baseInrShareBase;
+            }
+
+            const originalRemainder = roundCurrency(originalAmount - originalSum);
+            const baseInrRemainder = roundCurrency(baseInrAmount - baseInrSum);
+            const payerShare = calculatedShares.find((share) => share.userId === payerId);
+
+            if (payerShare) {
+              payerShare.originalAmount = roundCurrency(payerShare.originalAmount + originalRemainder);
+              payerShare.baseInrAmount = roundCurrency(payerShare.baseInrAmount + baseInrRemainder);
+            } else if (originalRemainder !== 0 || baseInrRemainder !== 0) {
+              calculatedShares.push({
+                userId: payerId,
+                originalAmount: originalRemainder,
+                baseInrAmount: baseInrRemainder,
+              });
             }
           } else if (splitTypeStr === 'EXACT') {
             const splitCount = activeSplitsData.length;
@@ -849,6 +864,10 @@ export class ImportService {
         anomalies: {
           select: { id: true },
         },
+        rows: {
+          where: { verdict: ImportRowVerdict.FLAGGED },
+          select: { id: true, rowNumber: true, verdict: true },
+        },
       },
     });
   }
@@ -927,11 +946,7 @@ export class ImportService {
     if (splitTypeStr === 'UNEQUAL') splitTypeStr = 'EXACT';
     if (splitTypeStr === 'PERCENTAGES') splitTypeStr = 'PERCENTAGE';
     if (splitTypeStr === 'SHARES') splitTypeStr = 'SHARE';
-    let safeDateStr = rawRow.expenseDate;
-    if (/^\d{2}-\d{2}-\d{4}$/.test(safeDateStr)) {
-      const [dd, mm, yyyy] = safeDateStr.split('-');
-      safeDateStr = `${yyyy}-${mm}-${dd}`;
-    }
+    const safeDateStr = ImportService.parseDateString(rawRow.expenseDate);
     const expenseDate = new Date(safeDateStr);
 
     // Load all memberships to do fuzzy name/email resolution
@@ -1032,26 +1047,35 @@ export class ImportService {
 
       if (splitTypeStr === 'EQUAL') {
         const shareCount = uniqueParticipants.length;
-        const originalShareBase = originalAmount / shareCount;
-        const baseInrShareBase = baseInrAmount / shareCount;
+        const originalShareBase = roundCurrency(originalAmount / shareCount);
+        const baseInrShareBase = roundCurrency(baseInrAmount / shareCount);
         let originalSum = 0;
         let baseInrSum = 0;
 
         for (let i = 0; i < shareCount; i++) {
           const uId = uniqueParticipants[i]!;
-          if (i === shareCount - 1) {
-            calculatedShares.push({
-              userId: uId,
-              originalAmount: roundCurrency(originalAmount - originalSum),
-              baseInrAmount: roundCurrency(baseInrAmount - baseInrSum),
-            });
-          } else {
-            const oRounded = roundCurrency(originalShareBase);
-            const bRounded = roundCurrency(baseInrShareBase);
-            originalSum += oRounded;
-            baseInrSum += bRounded;
-            calculatedShares.push({ userId: uId, originalAmount: oRounded, baseInrAmount: bRounded });
-          }
+          calculatedShares.push({
+            userId: uId,
+            originalAmount: originalShareBase,
+            baseInrAmount: baseInrShareBase,
+          });
+          originalSum += originalShareBase;
+          baseInrSum += baseInrShareBase;
+        }
+
+        const originalRemainder = roundCurrency(originalAmount - originalSum);
+        const baseInrRemainder = roundCurrency(baseInrAmount - baseInrSum);
+        const payerShare = calculatedShares.find((share) => share.userId === payerUser.id);
+
+        if (payerShare) {
+          payerShare.originalAmount = roundCurrency(payerShare.originalAmount + originalRemainder);
+          payerShare.baseInrAmount = roundCurrency(payerShare.baseInrAmount + baseInrRemainder);
+        } else if (originalRemainder !== 0 || baseInrRemainder !== 0) {
+          calculatedShares.push({
+            userId: payerUser.id,
+            originalAmount: originalRemainder,
+            baseInrAmount: baseInrRemainder,
+          });
         }
       } else if (splitTypeStr === 'EXACT') {
         const splitCount = resolvedSplits.length;
@@ -1207,11 +1231,7 @@ export class ImportService {
           const originalAmount = parseFloat(rawRow.originalAmount);
           const exchangeRate = rawRow.exchangeRate ? parseFloat(rawRow.exchangeRate) : 1.0;
           const baseInrAmount = roundCurrency(originalAmount * exchangeRate);
-          let safeDateStr = rawRow.expenseDate;
-          if (/^\d{2}-\d{2}-\d{4}$/.test(safeDateStr)) {
-            const [dd, mm, yyyy] = safeDateStr.split('-');
-            safeDateStr = `${yyyy}-${mm}-${dd}`;
-          }
+          const safeDateStr = ImportService.parseDateString(rawRow.expenseDate);
           const expenseDate = new Date(safeDateStr);
           const minDate = new Date(expenseDate);
           minDate.setDate(minDate.getDate() - 7);

@@ -1,0 +1,17 @@
+-- Extend the initial schema to match the imported-member and review workflow.
+ALTER TYPE "SplitType" ADD VALUE IF NOT EXISTS 'SHARE';
+
+ALTER TYPE "AnomalyType" ADD VALUE IF NOT EXISTS 'REFUND';
+ALTER TYPE "AnomalyType" ADD VALUE IF NOT EXISTS 'SETTLEMENT_DETECTED';
+ALTER TYPE "AnomalyType" ADD VALUE IF NOT EXISTS 'AMBIGUOUS_MEMBER';
+
+ALTER TABLE "users"
+ALTER COLUMN "email" DROP NOT NULL,
+ALTER COLUMN "passwordHash" DROP NOT NULL,
+ADD COLUMN "isRegistered" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "linkedUserId" UUID;
+
+ALTER TABLE "users"
+ADD CONSTRAINT "users_linkedUserId_fkey"
+FOREIGN KEY ("linkedUserId") REFERENCES "users"("id")
+ON DELETE SET NULL ON UPDATE CASCADE;

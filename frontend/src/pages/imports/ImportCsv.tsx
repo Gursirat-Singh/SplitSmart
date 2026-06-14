@@ -126,7 +126,7 @@ export const ImportCsv = () => {
                 <span className="block text-sm font-semibold text-primary">
                   {file ? file.name : 'Click or drag CSV here'}
                 </span>
-                <span className="block text-[11px] text-on-surface-variant mt-1.5">Accepts .csv files up to 5MB</span>
+                <span className="block text-[11px] text-on-surface-variant mt-1.5">Accepts .csv files up to 2MB</span>
               </div>
 
               <button
@@ -204,4 +204,3 @@ export const ImportCsv = () => {
     </MainLayout>
   );
 };
-

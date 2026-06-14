@@ -78,8 +78,8 @@ export class ExpenseService {
 
     if (splitType === 'EQUAL') {
       const shareCount = uniqueParticipants.length;
-      const originalShareBase = originalAmount / shareCount;
-      const baseInrShareBase = baseInrAmount / shareCount;
+      const originalShareBase = roundCurrency(originalAmount / shareCount);
+      const baseInrShareBase = roundCurrency(baseInrAmount / shareCount);
 
       let originalSum = 0;
       let baseInrSum = 0;
@@ -89,25 +89,30 @@ export class ExpenseService {
         if (!userId) {
           throw new ValidationError('Participant user ID is missing');
         }
-        // For the last user, assign the remainder to avoid rounding drift
-        if (i === shareCount - 1) {
-          const remainingOriginal = roundCurrency(originalAmount - originalSum);
-          const remainingBaseInr = roundCurrency(baseInrAmount - baseInrSum);
-          calculatedShares.push({
-            userId,
-            originalAmount: remainingOriginal,
-            baseInrAmount: remainingBaseInr,
-          });
-        } else {
-          const originalRounded = roundCurrency(originalShareBase);
-          const baseInrRounded = roundCurrency(baseInrShareBase);
-          originalSum += originalRounded;
-          baseInrSum += baseInrRounded;
+        calculatedShares.push({
+          userId,
+          originalAmount: originalShareBase,
+          baseInrAmount: baseInrShareBase,
+        });
+        originalSum += originalShareBase;
+        baseInrSum += baseInrShareBase;
+      }
 
+      // Assign rounding remainder strictly to the payer
+      const originalRemainder = roundCurrency(originalAmount - originalSum);
+      const baseInrRemainder = roundCurrency(baseInrAmount - baseInrSum);
+
+      if (originalRemainder !== 0 || baseInrRemainder !== 0) {
+        const payerShare = calculatedShares.find(s => s.userId === paidById);
+        if (payerShare) {
+          payerShare.originalAmount = roundCurrency(payerShare.originalAmount + originalRemainder);
+          payerShare.baseInrAmount = roundCurrency(payerShare.baseInrAmount + baseInrRemainder);
+        } else {
+          // Payer is not part of the split; add a self-share for the remainder to preserve the sum
           calculatedShares.push({
-            userId,
-            originalAmount: originalRounded,
-            baseInrAmount: baseInrRounded,
+            userId: paidById,
+            originalAmount: originalRemainder,
+            baseInrAmount: baseInrRemainder,
           });
         }
       }

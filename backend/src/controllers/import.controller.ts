@@ -24,9 +24,10 @@ type ImportBatchLike = {
 };
 
 export class ImportController {
-  private static mapStatus(status: string): 'PENDING' | 'COMPLETED' | 'FAILED' {
+  private static mapStatus(status: string, rows?: ImportBatchLike['rows']): 'PENDING' | 'COMPLETED' | 'FAILED' {
     if (status === 'COMPLETED') return 'COMPLETED';
     if (status === 'FAILED') return 'FAILED';
+    if (rows?.some((row) => row.verdict === 'FLAGGED')) return 'PENDING';
     return 'PENDING';
   }
 
@@ -36,7 +37,9 @@ export class ImportController {
       groupId: importBatch.groupId,
       uploadedById: importBatch.importedById,
       fileName: importBatch.fileName,
-      status: this.mapStatus(importBatch.status),
+      status: importBatch.rows?.some((row) => row.verdict === 'FLAGGED')
+        ? 'PENDING'
+        : this.mapStatus(importBatch.status, importBatch.rows),
       totalRows: importBatch.totalRows,
       importedRows: importBatch.successCount,
       anomaliesCount: importBatch.anomalies?.length ?? 0,
